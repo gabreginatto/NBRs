@@ -54,11 +54,11 @@ brew install tesseract tesseract-lang   # includes Portuguese (por)
 # First run: populate the database with all norms in the collection
 python3 nbr_extractor.py --enumerate-only
 
-# Process 50 norms (default daily batch)
-python3 nbr_extractor.py --batch 50
+# Process 10 norms (safe daily batch)
+python3 nbr_extractor.py --batch 10
 
 # Verbose output (shows page-by-page progress)
-python3 nbr_extractor.py --batch 50 --verbose
+python3 nbr_extractor.py --batch 10 --verbose
 
 # Preview what would be processed without downloading
 python3 nbr_extractor.py --dry-run
@@ -66,13 +66,15 @@ python3 nbr_extractor.py --dry-run
 
 ## Daily scheduling (cron)
 
-Run this once in your terminal to schedule automatic extraction Mon–Fri at 8am:
+Two batches of 10/day — morning (8am) and afternoon (5pm), Mon–Fri.
+Run these commands once in your terminal to install both cron jobs:
 
 ```bash
 (crontab -l 2>/dev/null; echo "0 8 * * 1-5 /Users/gabrielreginatto/Desktop/Code/NBRs/run_daily.sh >> /Users/gabrielreginatto/Desktop/Code/NBRs/logs/extractor.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "0 17 * * 1-5 /Users/gabrielreginatto/Desktop/Code/NBRs/run_afternoon.sh >> /Users/gabrielreginatto/Desktop/Code/NBRs/logs/extractor.log 2>&1") | crontab -
 ```
 
-Verify with `crontab -l`. At 562 norms and 50/day, the full collection completes in ~12 days.
+Verify with `crontab -l`. At 562 norms and 20/day (2×10), the full collection completes in ~29 weekdays (~6 weeks).
 
 ## Progress tracking
 

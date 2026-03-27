@@ -408,9 +408,9 @@ def run(batch_size=20, enumerate_only=False, dry_run=False, verbose=False):
                 conn.close()
                 return
 
-        # Get pending norms
+        # Get pending norms (include previous errors for retry)
         pending = conn.execute(
-            "SELECT * FROM norms WHERE extraction_status='pending' ORDER BY id LIMIT ?",
+            "SELECT * FROM norms WHERE extraction_status IN ('pending', 'error') ORDER BY extraction_status DESC, id LIMIT ?",
             (batch_size,)
         ).fetchall()
 
