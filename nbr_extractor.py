@@ -99,8 +99,8 @@ def init_db():
 
 
 def _kw_match(kw: str, title_lower: str) -> bool:
-    """Match keyword as a whole word, allowing for Portuguese plural -s suffix."""
-    return bool(re.search(r'(?<![a-záàãâéêíóôõúüçñ])' + re.escape(kw) + r's?(?![a-záàãâéêíóôõúüçñ])', title_lower))
+    """Match keyword as a whole word, allowing for Portuguese plurals (-s, -es)."""
+    return bool(re.search(r'(?<![a-záàãâéêíóôõúüçñ])' + re.escape(kw) + r'(?:e?s)?(?![a-záàãâéêíóôõúüçñ])', title_lower))
 
 
 def classify_category(title: str) -> str:
