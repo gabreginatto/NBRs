@@ -40,11 +40,13 @@ CATEGORY_KEYWORDS = {
         "medidores de água", "medidores de agua", "medição de vazão", "medição de agua",
         "medidor de velocidade ultrassonico", "ultrassonico", "ultrassônico",
         "medidor de velocidade", "medidor eletromagnético", "medidor de débito",
-        "água potável", "agua potavel", "abastecimento de água",
+        "água potável", "agua potavel", "abastecimento de água", "metrologia",
+        "materiais de referência",
     ],
     "tubulações": [
-        "polietileno", "pead", "tubo", "tubulação", "tubulacao",
+        "polietileno", "pead", "pe 100", "tubo", "tubulação", "tubulacao",
         "alta densidade", "conduto", "duto", "tubagem", "canalização",
+        "pvc", "adução", "distribuição de água", "esgoto",
     ],
     "conexões": [
         "conexão", "conexao", "eletrofusão", "eletrofusao",
@@ -54,13 +56,14 @@ CATEGORY_KEYWORDS = {
     "químicos": [
         "poliacrilamida", "floculante", "coagulante",
         "tratamento de água", "tratamento de agua",
-        "química", "quimica", "reagente", "coagulação", "floculação",
+        "coagulação", "floculação",
         "sulfato de alumínio", "cloro", "hipoclorito",
     ],
     "vedação": [
-        "vedação", "vedacao", "gaxeta", "junta", "anel de borracha",
-        "anel elastomerico", "anel elastomérico", "elastômero", "selo", "estanqueidade",
-        "anel de vedação",
+        "lacre",
+    ],
+    "akeso": [
+        "curativo", "seringas",
     ],
 }
 
@@ -98,6 +101,34 @@ def classify_category(title: str) -> str:
         if any(kw in title_lower for kw in keywords):
             return category
     return "outros"
+
+
+def is_relevant(title: str) -> bool:
+    """Return True only if the norm title matches at least one keyword across all categories."""
+    title_lower = title.lower()
+    return any(
+        kw in title_lower
+        for keywords in CATEGORY_KEYWORDS.values()
+        for kw in keywords
+    )
+
+
+def pre_filter_pending(conn, verbose=False) -> int:
+    """Mark pending norms with irrelevant titles as ignored before downloading."""
+    pending = conn.execute(
+        "SELECT id, code, title FROM norms WHERE extraction_status='pending' AND title IS NOT NULL AND title != ''"
+    ).fetchall()
+    ignored = 0
+    for row in pending:
+        if not is_relevant(row["title"]):
+            conn.execute("UPDATE norms SET extraction_status='ignored' WHERE id=?", (row["id"],))
+            ignored += 1
+            if verbose:
+                print(f"  [skip] {row['code']} — {row['title'][:60]}")
+    conn.commit()
+    if ignored:
+        print(f"[*] Pre-filter: marked {ignored} irrelevant norms as ignored")
+    return ignored
 
 
 # ── Login ────────────────────────────────────────────────────────────────────
@@ -324,6 +355,12 @@ def process_norm(page, row, dry_run=False, verbose=False):
         print(f"    Title: {title[:60]}...")
         print(f"    Category: {category}")
 
+    # Pre-filter: skip norms not relevant to InovaChina's product lines
+    if title and not is_relevant(title):
+        if verbose:
+            print(f"    [skip] Not relevant — ignoring")
+        return {"code": code, "title": title, "category": "ignored", "_ignored": True}
+
     if dry_run:
         return {"code": code, "title": title, "category": category}
 
@@ -408,6 +445,9 @@ def run(batch_size=20, enumerate_only=False, dry_run=False, verbose=False):
                 conn.close()
                 return
 
+        # Pre-filter: ignore norms whose titles don't match any relevant keyword
+        pre_filter_pending(conn, verbose=verbose)
+
         # Get pending norms (include previous errors for retry)
         pending = conn.execute(
             "SELECT * FROM norms WHERE extraction_status IN ('pending', 'error') ORDER BY extraction_status DESC, id LIMIT ?",
@@ -430,6 +470,15 @@ def run(batch_size=20, enumerate_only=False, dry_run=False, verbose=False):
 
             try:
                 result = process_norm(page, norm, dry_run=dry_run, verbose=verbose)
+
+                if not dry_run and result.get("_ignored"):
+                    conn.execute(
+                        "UPDATE norms SET extraction_status='ignored', title=?, code=? WHERE id=?",
+                        (result.get("title"), result.get("code"), norm["id"])
+                    )
+                    conn.commit()
+                    print(f"    ~ ignored (not relevant)")
+                    continue
 
                 if not dry_run:
                     conn.execute("""
