@@ -37,8 +37,7 @@ DELAY_MAX = 12
 CATEGORY_KEYWORDS = {
     "hidrômetros": [
         "hidrômetro", "hidrometro",
-        "medidor de água", "medidor de agua",
-        "medidores de água", "medidores de agua",
+        "medidor",
         "medição de vazão",
         "ultrassonico", "ultrassônico",
         "medidor eletromagnético",
