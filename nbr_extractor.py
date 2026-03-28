@@ -36,11 +36,15 @@ DELAY_MAX = 12
 
 CATEGORY_KEYWORDS = {
     "hidrômetros": [
-        "hidrômetro", "hidrometro", "medidor de água", "medidor de agua",
-        "medidores de água", "medidores de agua", "medição de vazão", "medição de agua",
-        "medidor de velocidade ultrassonico", "ultrassonico", "ultrassônico",
-        "medidor de velocidade", "medidor eletromagnético", "medidor de débito",
-        "água potável", "agua potavel", "abastecimento de água", "metrologia",
+        "hidrômetro", "hidrometro",
+        "medidor de água", "medidor de agua",
+        "medidores de água", "medidores de agua",
+        "medição de vazão",
+        "ultrassonico", "ultrassônico",
+        "medidor eletromagnético",
+        "medidor de débito",
+        "hidrometria",
+        "metrologia",
         "materiais de referência",
     ],
     "tubulações": [
@@ -515,8 +519,11 @@ def run(batch_size=20, enumerate_only=False, dry_run=False, verbose=False):
                 errors += 1
 
             # Polite delay between norms (skip delay after last one)
+            # Ignored norms only hit the detail page — use a short delay
+            # Downloaded norms hit the PDF viewer — use the full delay
             if i < len(pending):
-                delay = random.uniform(DELAY_MIN, DELAY_MAX)
+                was_ignored = not dry_run and isinstance(result, dict) and result.get("_ignored")
+                delay = random.uniform(1, 3) if was_ignored else random.uniform(DELAY_MIN, DELAY_MAX)
                 if verbose:
                     print(f"    Waiting {delay:.1f}s before next norm...")
                 time.sleep(delay)
