@@ -95,19 +95,24 @@ def init_db():
     return conn
 
 
+def _kw_match(kw: str, title_lower: str) -> bool:
+    """Match keyword as a whole word, allowing for Portuguese plural -s suffix."""
+    return bool(re.search(r'(?<![a-záàãâéêíóôõúüçñ])' + re.escape(kw) + r's?(?![a-záàãâéêíóôõúüçñ])', title_lower))
+
+
 def classify_category(title: str) -> str:
     title_lower = title.lower()
     for category, keywords in CATEGORY_KEYWORDS.items():
-        if any(kw in title_lower for kw in keywords):
+        if any(_kw_match(kw, title_lower) for kw in keywords):
             return category
     return "outros"
 
 
 def is_relevant(title: str) -> bool:
-    """Return True only if the norm title matches at least one keyword across all categories."""
+    """Return True only if the norm title matches at least one keyword as a whole word."""
     title_lower = title.lower()
     return any(
-        kw in title_lower
+        _kw_match(kw, title_lower)
         for keywords in CATEGORY_KEYWORDS.values()
         for kw in keywords
     )
